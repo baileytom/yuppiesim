@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core'
 import { DataService } from './data.service'
 import * as d3 from 'd3'
 import { type } from 'os'
+import { Foo } from './timeSpot'
 
 @Component({
   selector: 'app-root',
@@ -29,10 +30,17 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     this.dataService.getData().subscribe(data => {
       this.timeSlots = Object.values(data['Time Series (5min)'])
-      console.log(this.timeSlots[0])
+      let results = []
       for (const killme of this.timeSlots) {
         console.log(killme)
+      } // shits fucked
+      for (const killme in this.timeSlots) {
+        results.push(
+          new Foo(killme, this.timeSlots[killme]['1. open'])
+        )
       }
+      this.data = results
+      console.log(results)
     })
   }
 

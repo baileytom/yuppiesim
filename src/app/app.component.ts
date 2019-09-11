@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core'
 import { DataService } from './data.service'
 import * as d3 from 'd3'
-import { type } from 'os'
-import { Foo } from './timeSpot'
+
+import { TimeSpot } from './timeSpot'
+import { of } from 'rxjs'
 
 @Component({
   selector: 'app-root',
@@ -12,6 +13,7 @@ import { Foo } from './timeSpot'
 export class AppComponent implements OnInit {
   title = 'yuppiesimulator'
   data: any
+  timeKeys: any
   timeSlots: any
   x: any
   y: any
@@ -28,51 +30,88 @@ export class AppComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.getData()
+  }
+
+  getData() {
     this.dataService.getData().subscribe(data => {
-      this.timeSlots = Object.values(data['Time Series (5min)'])
+      data = data['Time Series (5min)']
+      let keys = Object.keys(data)
       let results = []
-      for (const killme of this.timeSlots) {
-        console.log(killme)
-      } // shits fucked
-      for (const killme in this.timeSlots) {
-        results.push(
-          new Foo(killme, this.timeSlots[killme]['1. open'])
-        )
-      }
+      keys.forEach((key) => {
+        results.push(new TimeSpot(key, ...Object.values(data[key])))
+      })
       this.data = results
-      console.log(results)
+      this.drawChart()
     })
   }
 
   drawChart() {
-    this.x = d3.scaleTime()
-      .range([0, this.width])
-      .domain([0, this.data.length])
+    // 2. Use the margin convention practice 
+    var margin = {top: 50, right: 50, bottom: 50, left: 50}
+    , width = window.innerWidth - margin.left - margin.right // Use the window's width 
+    , height = window.innerHeight - margin.top - margin.bottom; // Use the window's height
 
-    this.y = d3.scaleLinear()
-      .range([this.height, 0])
-      .domain([0, d3.max(this.data, (d: any) => parseInt(d.open, 10))])
+    // The number of datapoints
+    var n = this.data.length;
+    var dataset = this.data.map(d => { return {"y": parseFloat(d.open)}})
+    var min = parseFloat(d3.min(dataset.map(d => d.y)))
+    var max = parseFloat(d3.max(dataset.map(d => d.y)))
 
-    this.line = d3.line()
-      .x((d, i) => this.x(i))
-      .y((d: any) => this.y(d.open))
+    // 5. X scale will use the index of our data
+    var xScale = d3.scaleLinear()
+      .domain([0, n-1]) // input
+      .range([0, width]); // output
 
-    this.svg = d3.select('#chart').append('svg')
-      .attr('width', this.width)
-      .attr('height', this.height)
-      .append('g')
+    // 6. Y scale will use the randomly generate number 
+    var yScale = d3.scaleLinear()
+      .domain([min, max]) // input 
+      .range([height, 0]); // output 
 
-    this.svg.append('path')
-      .data(this.data)
-      .attr('class', 'line')
-      .attr('d', this.line)
+    // 7. d3's line generator
+    var line = d3.line()
+      .x(function(d, i) { return xScale(i); }) // set the x values for the line generator
+      .y(function(d) { return yScale(d.y); }) // set the y values for the line generator 
+      .curve(d3.curveMonotoneX) // apply smoothing to the line
 
-    this.svg.append('g')
-      .call(d3.axisBottom(this.x))
+    // 1. Add the SVG to the page and employ #2
+    var svg = d3.select("#chart").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    this.svg.append('g')
-      .call(d3.axisLeft(this.y))
+    // 3. Call the x axis in a group tag
+    svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(xScale)); // Create an axis component with d3.axisBottom
 
+    // 4. Call the y axis in a group tag
+    svg.append("g")
+      .attr("class", "y axis")
+      .call(d3.axisLeft(yScale)); // Create an axis component with d3.axisLeft
+
+    // 9. Append the path, bind the data, and call the line generator 
+    svg.append("path")
+      .datum(dataset) // 10. Binds data to the line 
+      .attr("class", "line") // Assign a class for styling 
+      .attr("d", line); // 11. Calls the line generator 
+
+    // 12. Appends a circle for each datapoint 
+    svg.selectAll(".dot")
+    .data(dataset)
+    .enter().append("circle") // Uses the enter().append() method
+      .attr("class", "dot") // Assign a class for styling
+      .attr("cx", function(d, i) { return xScale(i) })
+      .attr("cy", function(d) { return yScale(d.y) })
+      .attr("r", 5)
+      .on("mouseover", function(a, b, c) { 
+        console.log(a) 
+        d3.select(this).attr('class', 'focus')
+      })
+      .on("mouseout", function() { 
+        d3.select(this).attr('class', 'dot')
+      })
   }
-
 }

@@ -1,5 +1,21 @@
-.line {
-    fill: none;
-    stroke: steelblue;
-    stroke-width: 2px;
-  }
+:host ::ng-deep .line {
+  fill: none;
+  stroke: #ffab00;
+  stroke-width: 3;
+}
+
+:host ::ng-deep .overlay {
+fill: none;
+pointer-events: all;
+}
+
+/* Style the dots by assigning a fill and stroke */
+:host ::ng-deep .dot {
+  fill: #ffab00;
+  stroke: #fff;
+}
+
+:host ::ng-deep .focus circle {
+fill: none;
+stroke: steelblue;
+}
